@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import Player from './Player.js';
 import BlockRenderer from './blocks/BlockRenderer.js';
-import Generator from './Generator.js';
+import Chunk from './Chunk.js';
 
 class Game {
   constructor(canvas) {
@@ -20,10 +20,12 @@ class Game {
 
   start() {
     console.log('Game started');
+    this.renderer.setClearColor(0x87ceeb);
     
     // World generation
-    const generator = new Generator(this.scene);
-    generator.generateChunk(0, 0);
+    const chunk = new Chunk(this.scene, 0, 0);
+    chunk.generate();
+    chunk.render();
 
     // Player setup
     const player = new Player(this.camera, this.canvas);
