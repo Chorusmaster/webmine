@@ -1,0 +1,29 @@
+[
+  {
+    "name": "air",
+    "id": 0,
+    "texture": null
+  },
+  {
+    "name": "dirt",
+    "id": 1,
+    "texture_type": "single",
+    "texture": "dirt.png"
+  },
+  {
+    "name": "grass",
+    "id": 2,
+    "texture_type": "3-sided",
+    "textures": {
+      "top": "grass_top.png",
+      "side": "grass_side.png",
+      "bottom": "dirt.png"
+    }
+  },
+  {
+    "name": "stone",
+    "id": 3,
+    "texture_type": "single",
+    "texture": "stone.png"
+  }
+]
