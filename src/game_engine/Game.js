@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import Player from './Player.js';
-import BlockRenderer from './blocks/BlockRenderer.js';
-import Chunk from './Chunk.js';
+import ChunkManager from './ChunkManager.js';
 
 class Game {
   constructor(canvas) {
@@ -9,6 +8,7 @@ class Game {
     this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas });
+    this.chunkManager = new ChunkManager(this.scene);
     this.cube = null;
     this.scripts = [];
     this.lastTime = 0;
@@ -21,17 +21,15 @@ class Game {
   start() {
     console.log('Game started');
     this.renderer.setClearColor(0x87ceeb);
-    
-    // World generation
-    const chunk = new Chunk(this.scene, 0, 0);
-    chunk.generate();
-    chunk.render();
+
+    this.chunkManager.generateAround(0, 0);
 
     // Player setup
-    const player = new Player(this.camera, this.canvas);
+    const player = new Player(this.camera, this.canvas, this.chunkManager);
     this.add(player);
     this.scene.add(player.object);
     player.start();
+    player.respawn(4);
 
     window.addEventListener('resize', () => this.onResize(), false);
     this.onResize();

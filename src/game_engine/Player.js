@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
 class Player {
-  constructor(camera, canvas) {
+  constructor(camera, canvas, chunkmanager) {
     this.camera = camera;
     this.canvas = canvas;
+    this.chunkmanager = chunkmanager;
     this.keys = {};
     this.mousePos = new THREE.Vector2(0, 0);
 
@@ -65,6 +66,24 @@ class Player {
 
     dir.applyEuler(new THREE.Euler(0, this.object.rotation.y, 0));
     this.object.position.addScaledVector(dir, this.speed * delta);
+
+    const chunkX = Math.floor(this.object.position.x / 16);
+    const chunkZ = Math.floor(this.object.position.z / 16);
+
+    if (chunkX !== this.lastChunkX || chunkZ !== this.lastChunkZ) {
+      this.lastChunkX = chunkX;
+      this.lastChunkZ = chunkZ;
+
+      this.chunkmanager.generateAround(this.object.position.x, this.object.position.z);
+    }
+  }
+
+  respawn(radius) {
+    this.object.position.x = (Math.random() * 2 * radius) - radius;
+    this.object.position.z = (Math.random() * 2 * radius) - radius;
+    this.object.position.y = this.chunkmanager.getUpperBlockY(Math.floor(this.object.position.x), Math.floor(this.object.position.z)) + 2;
+
+    console.log(`Player spawned on x=${this.object.position.x}, y=${this.object.position.y}, z=${this.object.position.z}`);
   }
 }
 

@@ -1,34 +1,43 @@
 import * as THREE from 'three';
 
 const chunkSize = 16;
-const chunkHeight = 16;
-const stoneLevel = 8;
+const chunkHeight = 100;
+const stoneLevel = 92;
 const airHeight = 16;
 
 const tileSize = 1 / 2;
 
 class Chunk {
-  constructor(scene, x, z) {
+  constructor(scene, x, z, chunkManager) {
     this.mesh = null;
     this.scene = scene;
     this.blocks = [];
     this.material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: false });
+    this.x = x;
+    this.z = z;
+    this.loaded = false;
+    this.chunkManager = chunkManager;
+
+    this.texture = new THREE.TextureLoader().load('/textures/atlas.png');
+    this.texture.magFilter = THREE.NearestFilter;
+    this.texture.minFilter = THREE.NearestFilter;
+    this.texture.colorSpace = THREE.SRGBColorSpace;
   }
 
   generate() {
     this.blocks = [];
 
-    for (let x = 0; x < chunkSize; x++) {
+    for (let lx = 0; lx < chunkSize; lx++) {
       const column = [];
 
-      for (let y = 0; y < chunkHeight + airHeight; y++) {
+      for (let ly = 0; ly < chunkHeight + airHeight; ly++) {
         const row = [];
 
-        for (let z = 0; z < chunkSize; z++) {
+        for (let lz = 0; lz < chunkSize; lz++) {
 
-          if (y <= stoneLevel) row.push(2);
-          else if (y < chunkHeight - 1) row.push(3);
-          else if (y === chunkHeight - 1) row.push(1);
+          if (ly <= stoneLevel) row.push(2);
+          else if (ly < chunkHeight - 1) row.push(3);
+          else if (ly === chunkHeight - 1) row.push(1);
           else row.push(0);
 
         }
@@ -42,7 +51,7 @@ class Chunk {
 
   render() {
     if (!this.blocks) {
-      console.warn(`Cannot find blocks during chunk [${this.x}, ${this.y}] generation`)
+      console.warn(`Cannot find blocks during chunk [${this.x},${this.y}] generation`)
     }
 
     if (this.mesh != null) {
@@ -86,26 +95,39 @@ class Chunk {
       if (blockId === 3) return getUV(0, 1); // dirt
     }
 
-    for (let x = 0; x < chunkSize; x++) {
-      for (let y = 0; y < chunkHeight + airHeight; y++) {
-        for (let z = 0; z < chunkSize; z++) {
+    for (let lx = 0; lx < chunkSize; lx++) {
+      for (let ly = 0; ly < chunkHeight + airHeight; ly++) {
+        for (let lz = 0; lz < chunkSize; lz++) {
 
-          const block = this.blocks[x][y][z];
+          const block = this.blocks[lx][ly][lz];
           if (!block) continue;
 
           for (let face of faces) {
-            const nx = x + face.dir[0];
-            const ny = y + face.dir[1];
-            const nz = z + face.dir[2];
+            const nx = lx + face.dir[0];
+            const ny = ly + face.dir[1];
+            const nz = lz + face.dir[2];
 
-            const neighbour = this.blocks[nx]?.[ny]?.[nz];
-            if (neighbour) continue;
+            let neighbour;
+
+            if (nx < 0) {
+              neighbour = this.chunkManager.getBlockByLocalCoords(this.x - 1, this.z, chunkSize - 1, ny, nz);
+            } else if (nx >= chunkSize) {
+              neighbour = this.chunkManager.getBlockByLocalCoords(this.x + 1, this.z, 0, ny, nz);
+            } else if (nz < 0) {
+              neighbour = this.chunkManager.getBlockByLocalCoords(this.x, this.z - 1, nx, ny, chunkSize - 1);
+            } else if (nz >= chunkSize) {
+              neighbour = this.chunkManager.getBlockByLocalCoords(this.x, this.z + 1, nx, ny, 0);
+            } else {
+              neighbour = this.blocks[nx]?.[ny]?.[nz];
+            }
+
+            if (neighbour !== 0 && neighbour !== undefined) continue;
 
             for (const corner of face.corners) {
               vertices.push(
-                x + corner[0],
-                y + corner[1],
-                z + corner[2]
+                this.x * chunkSize + lx + corner[0],
+                ly + corner[1],
+                this.z * chunkSize + lz + corner[2]
               );
             }
 
@@ -123,6 +145,8 @@ class Chunk {
           }
         }
       }
+
+      this.loaded = true;
     }
 
     const geometry = new THREE.BufferGeometry();
@@ -139,17 +163,52 @@ class Chunk {
 
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
-    
-    const texture = new THREE.TextureLoader().load('/textures/atlas.png');
 
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    texture.colorSpace = THREE.SRGBColorSpace;
-
-    this.material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    this.material = new THREE.MeshBasicMaterial({ map: this.texture, side: THREE.DoubleSide });
 
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.scene.add(this.mesh);
+  }
+
+  unload() {
+    this.scene.remove(this.mesh);
+    this.loaded = false;
+  }
+
+  isLoaded() {
+    return this.loaded;
+  }
+
+  getBlock(localX, localY, localZ) {
+    if ((localX < 0) || (localX >= this.blocks.length) || (localY < 0) || (localY >= this.blocks[0].length) || (localZ < 0) || (localZ >= this.blocks[0][0].length)) {
+      console.warn(`Local coords x=${localX}, y=${localY}, z=${localZ} are out of boundary`)
+      return -1;
+    }
+    return this.blocks[localX][localY][localZ];
+  }
+
+  setBlock(block, localX, localY, localZ) {
+    if ((localX < 0) || (localX >= this.blocks.length) || (localY < 0) || (localY >= this.blocks[0].length) || (localZ < 0) || (localZ >= this.blocks[0][0].length)) {
+      console.warn(`Local coords x=${localX}, y=${localY}, z=${localZ} are out of boundary`)
+      return 0;
+    }
+    this.blocks[localX][localY][localZ] = block;
+    return 1;
+  }
+
+  getUpperBlockY(localX, localZ) {
+    if ((localX < 0) || (localX >= this.blocks.length) || (localZ < 0) || (localZ >= this.blocks[0][0].length)) {
+      console.warn(`Local coords x=${localX}, z=${localZ} are out of boundary`)
+      return 0;
+    }
+
+    for(let i = this.blocks[0].length - 1; i >= 0; i--) {
+      if (this.blocks[localX][i][localZ] != 0) {
+        return i + 1;
+      }
+    }
+
+    return -1;
   }
 }
 
