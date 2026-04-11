@@ -28,9 +28,12 @@ class Player {
     this.position = new THREE.Vector3(0, 0, 0);
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.gravity = 25;
-    this.speed = 2;
+    this.speed = 3;
     this.jumpSpeed = 8;
     this.rotationSpeed = 0.002;
+
+    this.stepOffset = 0;
+    this.stepSpeed = 10;
   }
 
   start() {
@@ -101,17 +104,36 @@ class Player {
     }
     
     //update rotation
-    dir.applyEuler(new THREE.Euler(0, this.object.rotation.y, 0));
-    const move = dir.multiplyScalar(this.speed * delta);
+    const forward = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(0, this.object.rotation.y, 0));
+    const right = new THREE.Vector3(1, 0, 0).applyEuler(new THREE.Euler(0, this.object.rotation.y, 0));
+    const moveForward = forward.clone().multiplyScalar(dir.z * this.speed * delta);
+    const moveRight = right.clone().multiplyScalar(dir.x * this.speed * delta);
     //update x
-    if (this.canGo(new THREE.Vector3(move.x * this.speed, 0, 0))) {
-      this.position.x += move.x * this.speed;
+    if (this.canGo(moveForward)) {
+      this.position.add(moveForward);
+    } else {
+      if (this.isGrounded && this.stepOffset === 0 && this.canStepUp(moveForward)) {
+        this.stepOffset = 1;
+        this.position.add(moveForward);
+      }
     }
     //update y
     this.position.y += this.velocity.y * delta;
     //update z
-    if (this.canGo(new THREE.Vector3(0, 0, move.z * this.speed))) {
-      this.position.z += move.z * this.speed;
+    if (this.canGo(moveRight)) {
+      this.position.add(moveRight);
+    } 
+    //step
+    if (this.stepOffset > 0) {
+      const step = this.stepSpeed * delta;
+
+      if (step > this.stepOffset) {
+        this.position.y += this.stepOffset;
+        this.stepOffset = 0;
+      } else {
+        this.position.y += step;
+        this.stepOffset -= step;
+      }
     }
     //update cursor
     this.updateCursorPos();
@@ -126,8 +148,6 @@ class Player {
       this.velocity.y = 0;
       this.position.y = Math.floor(this.position.y + PLAYER_HITBOX.y) - PLAYER_HITBOX.y;
     }
-
-    if (!this.isGrounded) console.log(this.position.y);
 
     this.object.position.set(this.position.x, this.position.y + PLAYER_HITBOX.y, this.position.z);
 
@@ -279,6 +299,45 @@ class Player {
     }
 
     return true;
+  }
+
+  canStepUp(move) {
+    const pos = this.position.clone().add(move);
+
+    const x = pos.x;
+    const z = pos.z;
+
+    const points = [
+      [PLAYER_HITBOX.x/2, PLAYER_HITBOX.z/2],
+      [-PLAYER_HITBOX.x/2, PLAYER_HITBOX.z/2],
+      [PLAYER_HITBOX.x/2, -PLAYER_HITBOX.z/2],
+      [-PLAYER_HITBOX.x/2, -PLAYER_HITBOX.z/2],
+    ];
+
+    for (let [dx, dz] of points) {
+      if (this.chunkmanager.getBlock(
+        Math.floor(x + dx), 
+        Math.floor(pos.y), 
+        Math.floor(z + dz)
+      ) !== 0)
+      {
+        if (this.chunkmanager.getBlock(
+        Math.floor(x + dx), 
+        Math.floor(pos.y + 1), 
+        Math.floor(z + dz)
+        ) == 0 &&
+        this.chunkmanager.getBlock(
+        Math.floor(x + dx), 
+        Math.floor(pos.y + 2), 
+        Math.floor(z + dz)
+        ) == 0) {
+          return true;
+        }
+        return false;
+      }
+    }
+
+    return false;
   }
 
   isInsidePlayerBlock(pos) {

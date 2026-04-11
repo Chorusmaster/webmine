@@ -181,7 +181,6 @@ class Chunk {
 
   getBlock(localX, localY, localZ) {
     if ((localX < 0) || (localX >= this.blocks.length) || (localY < 0) || (localY >= this.blocks[0].length) || (localZ < 0) || (localZ >= this.blocks[0][0].length)) {
-      console.warn(`Local coords x=${localX}, y=${localY}, z=${localZ} are out of boundary`)
       return -1;
     }
 
@@ -190,7 +189,6 @@ class Chunk {
 
   setBlock(block, localX, localY, localZ) {
     if ((localX < 0) || (localX >= this.blocks.length) || (localY < 0) || (localY >= this.blocks[0].length) || (localZ < 0) || (localZ >= this.blocks[0][0].length)) {
-      console.warn(`Local coords x=${localX}, y=${localY}, z=${localZ} are out of boundary`)
       return 0;
     }
     this.blocks[localX][localY][localZ] = block;
@@ -200,7 +198,6 @@ class Chunk {
 
   getUpperBlockY(localX, localZ) {
     if ((localX < 0) || (localX >= this.blocks.length) || (localZ < 0) || (localZ >= this.blocks[0][0].length)) {
-      console.warn(`Local coords x=${localX}, z=${localZ} are out of boundary`)
       return 0;
     }
 
