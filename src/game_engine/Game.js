@@ -5,7 +5,7 @@ import ChunkManager from './ChunkManager.js';
 class Game {
   constructor(canvas) {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.01, 1000 );
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas });
     this.chunkManager = new ChunkManager(this.scene);
@@ -25,7 +25,7 @@ class Game {
     this.chunkManager.generateAround(0, 0);
 
     // Player setup
-    const player = new Player(this.camera, this.canvas, this.chunkManager);
+    const player = new Player(this.camera, this.canvas, this.scene, this.chunkManager);
     this.add(player);
     this.scene.add(player.object);
     player.start();

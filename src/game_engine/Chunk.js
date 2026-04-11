@@ -1,16 +1,16 @@
 import * as THREE from 'three';
 
 const chunkSize = 16;
-const chunkHeight = 100;
-const stoneLevel = 92;
+const chunkHeight = 10;
+const stoneLevel = 5;
 const airHeight = 16;
 
 const tileSize = 1 / 2;
 
 class Chunk {
-  constructor(scene, x, z, chunkManager) {
+  constructor(parentObj, x, z, chunkManager) {
     this.mesh = null;
-    this.scene = scene;
+    this.parentObj = parentObj;
     this.blocks = [];
     this.material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: false });
     this.x = x;
@@ -55,7 +55,7 @@ class Chunk {
     }
 
     if (this.mesh != null) {
-      this.scene.remove(this.mesh);
+      this.parentObj.remove(this.mesh);
     }
 
     const vertices = [];
@@ -167,11 +167,11 @@ class Chunk {
     this.material = new THREE.MeshBasicMaterial({ map: this.texture, side: THREE.DoubleSide });
 
     this.mesh = new THREE.Mesh(geometry, this.material);
-    this.scene.add(this.mesh);
+    this.parentObj.add(this.mesh);
   }
 
   unload() {
-    this.scene.remove(this.mesh);
+    this.parentObj.remove(this.mesh);
     this.loaded = false;
   }
 
@@ -184,6 +184,7 @@ class Chunk {
       console.warn(`Local coords x=${localX}, y=${localY}, z=${localZ} are out of boundary`)
       return -1;
     }
+
     return this.blocks[localX][localY][localZ];
   }
 
@@ -193,6 +194,7 @@ class Chunk {
       return 0;
     }
     this.blocks[localX][localY][localZ] = block;
+    if(localY > 0 && this.blocks[localX][localY-1][localZ] == 1 && block != 0) this.blocks[localX][localY-1][localZ] = 3;
     return 1;
   }
 
